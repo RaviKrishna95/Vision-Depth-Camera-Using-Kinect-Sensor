@@ -1,0 +1,220 @@
+using Microsoft.Kinect;
+
+using System;
+
+using System.Collections.Generic;
+
+using System.Linq;
+
+using System.Text;
+
+using System.Threading.Tasks;
+
+namespace GestureRecognitionApp
+
+{
+
+    class ZoomInGesture : GestureBase
+
+    {
+
+        // intermediate right hand position used for validation of the gesture
+
+        private SkeletonPoint validatePosition;
+        private SkeletonPoint validatePosition1;
+
+        // starting right hand position when the gesture start condition is met (starting pose)
+
+        private SkeletonPoint startingPostion;
+        private SkeletonPoint startingPostion1;
+
+        // distance between the hand right and the left shoulder
+
+        private float shoulderDiff;
+
+        // constructor 
+
+        public ZoomInGesture() : base(GestureType.ZoomIn) { }
+
+        // check to see if the starting pose is seen
+
+        // called for every skeleton frame received
+
+
+        protected override bool ValidateGestureStartCondition(Skeleton skeleton)
+
+        {
+
+            var handRightPosition = skeleton.Joints[JointType.HandRight].Position;
+
+            var handLeftPosition = skeleton.Joints[JointType.HandLeft].Position;
+
+            var shoulderRightPosition = skeleton.Joints[JointType.ShoulderRight].Position;
+
+            var spinePosition = skeleton.Joints[JointType.Spine].Position;
+            var hipcenterposition = skeleton.Joints[JointType.HipCenter].Position;
+            //shoulderDiff = GestureHelper.GetJointDistance(skeleton.Joints[JointType.HandRight], skeleton.Joints[JointType.HandLeft]);
+
+            // Starting pose:
+
+            // right hand lower than right shoulder && right hand higher than right elbow
+
+            // && left hand lower than spine
+            //validatePosition = skeleton.Joints[JointType.HandLeft].Position;
+
+            //startingPostion = skeleton.Joints[JointType.HandRight].Position;
+            float currentshoulderDiff = GestureHelper.GetJointDistance(skeleton.Joints[JointType.HandRight], skeleton.Joints[JointType.HandLeft]);
+
+            if ((handRightPosition.Y < shoulderRightPosition.Y) &&
+
+                    (handLeftPosition.Y < shoulderRightPosition.Y)
+
+                        && (handRightPosition.Y > hipcenterposition.Y) && (handLeftPosition.Y > hipcenterposition.Y) && (currentshoulderDiff > 0.5))
+
+            {
+
+                shoulderDiff = GestureHelper.GetJointDistance(skeleton.Joints[JointType.HandRight], skeleton.Joints[JointType.HandLeft]);
+                double currentdistance = Math.Abs(skeleton.Joints[JointType.HandRight].Position.X - skeleton.Joints[JointType.HandLeft].Position.X);
+
+                validatePosition = skeleton.Joints[JointType.HandRight].Position;
+
+                startingPostion = skeleton.Joints[JointType.HandRight].Position;    //validatePosition = skeleton.Joints[JointType.HandLeft].Position;
+
+                validatePosition1 = skeleton.Joints[JointType.HandLeft].Position;
+
+                startingPostion1 = skeleton.Joints[JointType.HandLeft].Position;    //validatePosition = skeleton.Joints[JointType.HandLeft].Position;
+                                                                                    //startingPostion = skeleton.Joints[JointType.HandRight].Position;
+
+                return false;
+            }
+
+            else
+                return true;
+
+        }
+
+        // called for every skeleton frame
+
+        protected override bool IsGestureValid(Skeleton skeletonData)
+
+        {
+
+            // current right hand position
+
+            var currentHandRightPoisition = skeletonData.Joints[JointType.HandRight].Position;
+            var currentHandLeftPoisition = skeletonData.Joints[JointType.HandLeft].Position;
+
+            //double distance = Math.Abs(startingPostion.X - validatePosition.X);
+            //double distance1 = Math.Abs(startingPostion1.X - validatePosition1.X);
+            double di = Math.Abs(validatePosition.X - validatePosition1.X);
+            double currentdistance = Math.Abs(skeletonData.Joints[JointType.HandRight].Position.X - skeletonData.Joints[JointType.HandLeft].Position.X);
+
+            // current right hand should be on the left of the previous right hand position, 
+
+            // i.e., the right hand is moving to the left
+
+            //if (validatePosition.X < currentHandRightPoisition.X)
+
+            //{
+
+            //    // if the right hand is moving to the right, stop doing gesture recognition
+
+            //    return false;
+
+            //}
+
+            if (di < currentdistance)
+
+            {
+
+                // if the right hand is moving to the right, stop doing gesture recognition
+
+                return false;
+
+            }
+            // update the validatePosition using the current right hand position
+
+            validatePosition = currentHandRightPoisition;
+            validatePosition1 = currentHandLeftPoisition;
+
+            // gesture so far so good
+
+            return true;
+
+        }
+
+        // check if the final pose has reached
+
+        protected override bool ValidateGestureEndCondition(Skeleton skeleton)
+
+        {
+
+            // distance between the staring right hand position and 
+
+            // the last right hand position
+
+            //double distance = Math.Abs(startingPostion.X - validatePosition.X);
+            //double distance1 = Math.Abs(startingPostion1.X - validatePosition1.X);
+            //// the distance between the current right hand and the left shoulder
+            //double d = Math.Abs(distance - distance1);
+            float currentshoulderDiff = GestureHelper.GetJointDistance(skeleton.Joints[JointType.HandRight], skeleton.Joints[JointType.HandLeft]);
+
+            // the right hand has moved for 0.1m since its starting position and
+
+            // the right hand is getting closer to the left shoulder => we are done!
+
+            if (currentshoulderDiff > 1.0)
+
+            {
+                return false;
+            }
+            // otherwise, the right hand has not moved enough distance yet
+            else {
+                return true;
+            }
+        }
+
+        protected override bool ValidateBaseCondition(Skeleton skeleton)
+
+        {
+
+            var handRightPosition = skeleton.Joints[JointType.HandRight].Position;
+
+            var handLeftPosition = skeleton.Joints[JointType.HandLeft].Position;
+
+            var shoulderRightPosition = skeleton.Joints[JointType.ShoulderRight].Position;
+            var shoulderLeftPosition = skeleton.Joints[JointType.ShoulderLeft].Position;
+
+            var spinePosition = skeleton.Joints[JointType.Spine].Position;
+            var hipcenterposition = skeleton.Joints[JointType.HipCenter].Position;
+
+
+            // right hand is to the left of the right shoulder, and
+
+            // right hand is higher than right elbow, and
+
+            // left hand is lower than spine
+
+            if ((handRightPosition.Y < shoulderRightPosition.Y) &&
+
+               (handLeftPosition.Y < shoulderLeftPosition.Y)
+
+               && (handRightPosition.Y > hipcenterposition.Y) && (handLeftPosition.Y > hipcenterposition.Y))
+
+            {
+
+                // swipe to the left is ongoing, so far so good
+
+                return true;
+
+            }
+
+            // condition is not met, terminate
+            else
+                return false;
+
+        }
+
+    }
+
+}

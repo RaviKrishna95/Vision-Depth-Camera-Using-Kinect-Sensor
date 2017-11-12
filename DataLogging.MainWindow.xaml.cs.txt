@@ -1,0 +1,196 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.IO;
+using Microsoft.Kinect;
+
+namespace DataLogging
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        KinectSensor sensor;
+        Skeleton[] totalSkeleton = new Skeleton[6];
+        WriteableBitmap colorBitmap;
+        byte[] colorPixels;
+        Skeleton skeleton;
+        int currentSkeletonID = 0;
+        StreamWriter sw = File.CreateText("kinect.csv");
+        public MainWindow()
+        {
+            InitializeComponent();
+
+        }
+        private void WindowLoaded(object sender, RoutedEventArgs e)
+        {
+            sw.WriteLine("FrameNo,timestsamp,MC-X,MC-Y,MC-Z,MC-D,HipCenter-X,HipCenter-Y,HipCenter-Z,HipCenter-D,Spine-X,Spine-Y,Spine-Z,Spine-D,ShoulderCenter-X,ShoulderCenter-Y,ShoulderCenter-Z,ShoulderCenter-D,Head-X,Head-Y,Head-Z,Head-D,ShoulderLeft-X,ShoulderLeft-Y,ShoulderLeft-Z,ShoulderLeft-D,ElbowLeft-X,ElbowLeft-Y,ElbowLeft-Z,ElbowLeft-D,WristLeft-X,WristLeft-Y,WristLeft-Z,WristLeft-D,HandLeft-X,HandLeft-Y,HandLeft-Z,HandLeft-D,ShoulderRight-X,ShoulderRight-Y,ShoulderRight-Z,ShoulderRight-D,ElbowRight-X,ElbowRight-Y,ElbowRight-Z,ElbowRight-D,WristRight-X,WristRight-Y,WristRight-Z,WristRight-D,HandRight-X,HandRight-Y,HandRight-Z,HandRight-D,HipLeft-X,HipLeft-Y,HipLeft-Z,HipLeft-D,KneeLeft-X,KneeLeft-Y,KneeLeft-Z,KneeLeft-D,AnkleLeft-X,AnkleLeft-Y,AnkleLeft-Z,AnkleLeft-D,FootLeft-X,FootLeft-Y,FootLeft-Z,FootLeft-D,HipRight-X,HipRight-Y,HipRight-Z,HipRight-D,KneeRight-X,KneeRigt-Y,KneeRight-Z,KneeRight-D,AnkleRight-X,AnkleRight-Y,AnkleRight-Z,AnkleRight-D,FootRight-X,FootRight-Y,FootRight-Z,FootRight-D");
+            if (KinectSensor.KinectSensors.Count > 0)
+            {
+                this.sensor = KinectSensor.KinectSensors[0];
+                if (this.sensor != null && !this.sensor.IsRunning)
+                {
+                    this.sensor.ColorStream.Enable();
+                    this.colorPixels = new byte[this.sensor.ColorStream.FramePixelDataLength];
+                    this.colorBitmap = new WriteableBitmap(this.sensor.ColorStream.FrameWidth, this.sensor.ColorStream.FrameHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
+                    this.image1.Source = this.colorBitmap;
+                    this.sensor.ColorFrameReady += this.colorFrameReady;
+                    this.sensor.SkeletonStream.TrackingMode = SkeletonTrackingMode.Default;
+                    this.sensor.SkeletonStream.Enable();
+                    this.sensor.SkeletonFrameReady += this.skeletonFrameReady;
+                    this.sensor.Start();
+                }
+                else {
+                    MessageBox.Show("No device is connected!");
+                    this.Close();
+                }
+            }
+        }
+        void colorFrameReady(object sender, ColorImageFrameReadyEventArgs e)
+        {
+            using (ColorImageFrame image1 = e.OpenColorImageFrame())
+            {
+                if (null == image1)
+                    return;
+
+                image1.CopyPixelDataTo(colorPixels);
+                int stride = image1.Width * image1.BytesPerPixel;
+
+                // Write the pixel data into our bitmap
+                this.colorBitmap.WritePixels(
+                    new Int32Rect(0, 0, this.colorBitmap.PixelWidth, this.colorBitmap.PixelHeight),
+                        this.colorPixels, stride, 0);
+            }
+        }
+        private void DrawSkeleton(Skeleton skeleton)
+        {
+            drawBone(skeleton.Joints[JointType.Head], skeleton.Joints[JointType.ShoulderCenter]);
+            drawBone(skeleton.Joints[JointType.ShoulderCenter], skeleton.Joints[JointType.Spine]);
+
+            drawBone(skeleton.Joints[JointType.ShoulderCenter], skeleton.Joints[JointType.ShoulderLeft]);
+            drawBone(skeleton.Joints[JointType.ShoulderLeft], skeleton.Joints[JointType.ElbowLeft]);
+            drawBone(skeleton.Joints[JointType.ElbowLeft], skeleton.Joints[JointType.WristLeft]);
+            drawBone(skeleton.Joints[JointType.WristLeft], skeleton.Joints[JointType.HandLeft]);
+
+            drawBone(skeleton.Joints[JointType.ShoulderCenter], skeleton.Joints[JointType.ShoulderRight]);
+            drawBone(skeleton.Joints[JointType.ShoulderRight], skeleton.Joints[JointType.ElbowRight]);
+            drawBone(skeleton.Joints[JointType.ElbowRight], skeleton.Joints[JointType.WristRight]);
+            drawBone(skeleton.Joints[JointType.WristRight], skeleton.Joints[JointType.HandRight]);
+            drawBone(skeleton.Joints[JointType.Spine], skeleton.Joints[JointType.HipCenter]);
+            drawBone(skeleton.Joints[JointType.HipCenter], skeleton.Joints[JointType.HipLeft]);
+            drawBone(skeleton.Joints[JointType.HipLeft], skeleton.Joints[JointType.KneeLeft]);
+            drawBone(skeleton.Joints[JointType.KneeLeft], skeleton.Joints[JointType.AnkleLeft]);
+            drawBone(skeleton.Joints[JointType.AnkleLeft], skeleton.Joints[JointType.FootLeft]);
+
+            drawBone(skeleton.Joints[JointType.HipCenter], skeleton.Joints[JointType.HipRight]);
+            drawBone(skeleton.Joints[JointType.HipRight], skeleton.Joints[JointType.KneeRight]);
+            drawBone(skeleton.Joints[JointType.KneeRight], skeleton.Joints[JointType.AnkleRight]);
+            drawBone(skeleton.Joints[JointType.AnkleRight], skeleton.Joints[JointType.FootRight]);
+        }
+        private Point ScalePosition(SkeletonPoint skeletonPoint)
+        {
+            DepthImagePoint depthPoint = this.sensor.CoordinateMapper.MapSkeletonPointToDepthPoint(skeletonPoint, DepthImageFormat.Resolution320x240Fps30);
+            return new Point(depthPoint.X, depthPoint.Y);
+        }
+        void drawBone(Joint trackedJoint1, Joint trackedJoint2)
+        {
+            Line bone = new Line();
+            bone.Stroke = Brushes.Red;
+            bone.StrokeThickness = 3;
+            Point joint1 = this.ScalePosition(trackedJoint1.Position);
+            bone.X1 = joint1.X;
+            bone.Y1 = joint1.Y;
+
+            Point joint2 = this.ScalePosition(trackedJoint2.Position);
+            bone.X2 = joint2.X;
+            bone.Y2 = joint2.Y;
+
+            canvas1.Children.Add(bone);
+        }
+        void skeletonFrameReady(object sender, SkeletonFrameReadyEventArgs e)
+        {
+            canvas1.Children.Clear();
+
+            long timestamp = -1;
+            int frameno = -1;
+            float A = 0;
+            float B = 0;
+            float C = 0;
+            float D = 0;
+
+            using (SkeletonFrame skeletonFrame = e.OpenSkeletonFrame())
+            {
+                // check for frame drop.
+                if (skeletonFrame == null)
+                {
+                    return;
+                }
+                timestamp = skeletonFrame.Timestamp;
+                frameno = skeletonFrame.FrameNumber;
+                A = skeletonFrame.FloorClipPlane.Item1;
+                B = skeletonFrame.FloorClipPlane.Item2;
+                C = skeletonFrame.FloorClipPlane.Item3;
+                D = skeletonFrame.FloorClipPlane.Item4;
+
+                // copy the frame data in to the collection
+                skeletonFrame.CopySkeletonDataTo(totalSkeleton);
+
+                // get the first Tracked skeleton
+                skeleton = (from trackskeleton in totalSkeleton
+                            where trackskeleton.TrackingState == SkeletonTrackingState.Tracked
+                            select trackskeleton).FirstOrDefault();
+
+                // if the first skeleton returns null
+                if (skeleton == null)
+                    return;
+
+                if (skeleton != null && this.currentSkeletonID != skeleton.TrackingId)
+                {
+                    this.currentSkeletonID = skeleton.TrackingId;
+                    int totalTrackedJoints = skeleton.Joints.Where(item => item.TrackingState == JointTrackingState.Tracked).Count();
+                    string TrackedTime = DateTime.Now.ToString("hh:mm:ss");
+                    string status = "Skeleton Id: " + this.currentSkeletonID + ", total tracked joints: " + totalTrackedJoints + ", TrackTime: " + TrackedTime + "\n";
+                    this.textBlock1.Text += status;
+                }
+                DrawSkeleton(skeleton);
+
+                sw.Write(frameno +",");
+                sw.Write(timestamp + ",");
+
+
+                float xc = skeleton.Position.X;
+                float yc = skeleton.Position.Y;
+                float zc = skeleton.Position.Z;
+                float cmd = A * xc + B * yc + C * zc + D;
+                sw.Write(xc + "," + yc + "," + zc + "," + cmd + ",");
+
+                for (int i = 0; i < 20; i++)
+                {
+                    float x = skeleton.Joints[(JointType)i].Position.X;
+                    float y = skeleton.Joints[(JointType)i].Position.Y;
+                    float z = skeleton.Joints[(JointType)i].Position.Z;
+                    float dist = A * x + B * y + C * z + D;
+                    sw.Write(x + "," + y + "," + z + "," + dist + ",");
+                }
+                sw.WriteLine("");
+            }
+        }
+
+        private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+
+        }
+    }
+}

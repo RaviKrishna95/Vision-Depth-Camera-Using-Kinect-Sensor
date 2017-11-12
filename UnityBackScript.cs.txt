@@ -1,0 +1,694 @@
+using UnityEngine;
+
+using System.Collections;
+
+using System.Xml;
+
+using System.ComponentModel;
+
+using System.Collections.Generic;
+
+using System.Linq;
+
+using System.Text;
+
+using System;
+
+using System.IO;
+
+public class BackScript : MonoBehaviour 
+{
+
+	float MIN_2_HIP = 0.9f;
+
+	float MIN_2_ANKLE = 0.7f;
+
+	float MAX_THD = 0.5f;
+
+	float min2hip = 2.0f;
+
+	float min2ankle = 2.0f;
+
+	float max2ankle = 0f;
+
+	float maxthd = 0.0f;
+ 
+    	int correctCount = 0;
+ 
+    	int state = -1;
+
+	public GameObject Hip_Center;
+
+	public GameObject Spine;
+
+	public GameObject Shoulder_Center;
+
+	public GameObject Head;
+
+	public GameObject Shoulder_Left;
+
+	public GameObject Elbow_Left;
+
+	public GameObject Wrist_Left;
+
+	public GameObject Hand_Left;
+
+	public GameObject Shoulder_Right;
+
+	public GameObject Elbow_Right;
+
+	public GameObject Wrist_Right;
+
+	public GameObject Hand_Right;
+
+	public GameObject Hip_Left;
+
+	public GameObject Knee_Left;
+
+	public GameObject Ankle_Left;
+
+	public GameObject Foot_Left;
+
+	public GameObject Hip_Right;
+
+	public GameObject Knee_Right;
+
+	public GameObject Ankle_Right;
+
+	public GameObject Foot_Right;
+
+	private GameObject[] _bones;
+ //internal handle for the bones of the model
+
+    	GameObject hip2spine;
+
+	GameObject spine2shoulder;
+
+	GameObject shoulder2head;
+
+	GameObject leftShoulder;
+
+	GameObject rightShoulder;
+
+	GameObject leftUpperArm;
+
+	GameObject leftArm;
+
+	GameObject leftHand;
+
+	GameObject rightUpperArm;
+
+	GameObject rightArm;
+
+	GameObject rightHand;
+
+	GameObject leftHip;
+
+	GameObject rightHip;
+
+	GameObject leftUpperLeg;
+
+	GameObject leftLeg;
+
+	GameObject leftFoot;
+
+	GameObject rightUpperLeg;
+
+	GameObject rightLeg;
+
+	GameObject rightFoot;
+ 
+    	public GUIText statusDisplay;
+
+	List<string> exitems = new List<string>();
+	
+	List<string> exfileitems = new List<string>();
+
+	List<List<int>> exjointsitems = new List<List<int>>();
+
+	List<float[][]> exdata = new List<float[][]>();
+
+	private int guideCounter = 0;
+
+	bool skipframe = false;
+
+	public Vector3 Scale = new Vector3(0.001f, 0.001f, 0.001f);
+
+    	float lastTs;
+
+	private Vector3 rootPosition = new Vector3();
+
+	// Use this for initialization
+
+	void Start ()
+ 
+	{
+
+		//store bones in a list for easier access
+
+		_bones = new GameObject[] {Hip_Center, Spine, Shoulder_Center, Head,Shoulder_Left,Elbow_Left, Wrist_Left, Hand_Left,
+Shoulder_Right, Elbow_Right, Wrist_Right, Hand_Right,
+Hip_Left, Knee_Left, Ankle_Left, Foot_Left,
+Hip_Right, Knee_Right, Ankle_Right, Foot_Right};
+
+		connectBones();
+
+	}
+
+    void Update ()
+ 
+	{
+
+		if (exdata.Count == 0)
+
+			return;
+
+	}
+
+	    void OnGUI()
+
+	{
+
+		if (GUI.Button (new Rect (10, 70, 150, 30), "Load Kinect v1 Data"))
+ 
+		{
+
+			loadConfig(true);
+
+			Debug.Log ("Kinect v1 data is loaded");
+
+		}
+
+        if (Event.current.Equals(Event.KeyboardEvent("escape")))
+ {
+
+			print("Quitting");
+
+			Application.Quit();
+
+		}
+
+		if (Event.current.Equals(Event.KeyboardEvent("p")))
+ {
+
+			print ("Previous Frame");
+
+			if(this.guideCounter > 2)
+
+				this.guideCounter = this.guideCounter - 2;
+			DisplayNextFrame();
+
+		}
+
+		if (Event.current.Equals(Event.KeyboardEvent("n"))) 
+{
+
+			print ("Next Frame");
+
+			DisplayNextFrame();
+
+		}
+
+		if (Event.current.Equals(Event.KeyboardEvent("s"))) 
+{
+
+			string filename = GetScreenshotFilename();
+
+			print("Writing screenshot to " + filename);
+
+			Application.CaptureScreenshot(filename);
+
+		}
+
+	}
+ 
+	    private void loadConfig(bool kinectv1data)
+
+	{
+
+		XmlDocument xmlDoc = new XmlDocument ();
+
+		xmlDoc.Load ("test.xml");
+
+		XmlNodeList fileName = xmlDoc.GetElementsByTagName ("GuideFile");
+
+		if (1 != fileName.Count)
+ {
+
+			Debug.Log ("expecting exactly one guidefile, got: " + fileName.Count);
+
+			return;
+
+		}
+
+		XmlNodeList innerlist = fileName [0].ChildNodes;
+
+		if (1 != innerlist.Count)
+ {
+
+			Debug.Log ("guidefile should have only one child, got: " + innerlist.Count);
+
+		}
+
+		String fn = innerlist [0].InnerText;
+
+		float[][] guideData = getGuideData (fn);
+
+		exdata.Add (guideData);
+
+	}
+ 
+	    private float[][] getGuideData(String filename)
+
+	{
+
+		String[] dataStrings = null;
+
+		if (File.Exists(filename))
+
+		{
+
+			dataStrings = File.ReadAllLines(filename);
+
+			Debug.Log("Replay: done loading data");
+
+		}
+
+		else
+
+		{
+
+			Debug.Log("file not found: "+filename);
+
+			return null;
+
+		}
+
+		// the first row is the caption, skip it, hence the -1
+
+		int size = dataStrings.Length-1;
+
+		float[][] allSamples = new float[size][]; 
+
+		        // the first row is the caption, skip it
+
+		for (int i = 0; i < allSamples.Length; i++)
+
+		{
+
+			String[] row = dataStrings[i + 1].Split(',');
+
+			int rowlen = 1+20*3; // 1 column for ts, 20 sets of joints (x,y,z)
+
+			allSamples[i] = new float[rowlen];
+
+			int k = 0;
+
+            for(int j=0; j<row.Length; j++)
+ {
+
+				// column 0 is for frame number
+
+				if(j==0)
+
+					continue;
+
+				// column 2,3,4,5 are for center of mass
+
+				if(j >= 2 && j <=5)
+
+					continue;
+
+				// for each joint, the 4th column is for vertical distance, skip it too
+
+				if(j > 6 && ((j-5) % 4)==0)
+
+					continue;
+
+				allSamples[i][k++]=(float)Convert.ToDouble(row[j]);
+
+				if(k == 61)
+
+					break;
+
+            }
+
+		}
+
+      return allSamples;
+ 
+	}
+
+	
+    string GetScreenshotFilename()
+
+	{
+
+		System.IO.Directory.CreateDirectory("Screenshots");
+
+		int i=1;
+
+		while (System.IO.File.Exists(System.IO.Path.Combine("Screenshots", "Screenshot" + i +".png")))
+ {
+
+			i++;
+
+		}
+
+		return System.IO.Path.Combine("Screenshots", "Screenshot" + i + ".png");
+
+	}
+
+	    void DisplayNextFrame()
+ 
+	{
+
+		float[][] guideData = exdata[0];
+
+		float[] frame;
+
+		if(guideCounter < guideData.Length)
+
+		{
+
+			frame = guideData[guideCounter];
+
+			if(null == frame)
+  {
+  return; 
+}
+            // first column is frame number; second column is timestamp;  first 3 are for rootposition
+
+			Vector3 jpt = new Vector3();
+
+			int jointCount = 20;
+
+			for(int i=0; i<jointCount; i++)
+
+			{
+
+				jpt.x = 1200 - frame[1+3*i]*1000;
+
+				jpt.y = frame[2+3*i]*1000+500;
+
+				jpt.z = frame[3+3*i]*1000;
+
+                Debug.Log ("x="+jpt.x+",y="+jpt.y+",z="+jpt.z);
+
+			Vector3 dest = Vector3.Scale(jpt, Scale);
+ 
+                _bones[i].transform.position = dest;
+
+			}
+
+		updateBones();
+
+            guideCounter++;
+
+		}
+
+        if(guideCounter >= guideData.Length)
+
+            guideCounter = 0;
+
+		assessToetouch();
+
+	}
+
+	
+    void connectBones()
+
+	{
+
+		this.hip2spine = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		this.spine2shoulder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		shoulder2head = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+	
+		leftShoulder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightShoulder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftUpperArm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftArm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftHand = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightUpperArm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightArm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightHand = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftHip = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightHip = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftUpperLeg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftLeg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		leftFoot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightUpperLeg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightLeg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		rightFoot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+		hip2spine.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		spine2shoulder.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		shoulder2head.transform.localScale = new Vector3(0.05f, 0.1f, 0.05f);
+
+		leftShoulder.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		rightShoulder.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		leftUpperArm.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		leftArm.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		leftHand.transform.localScale = new Vector3(0.05f, 0.1f, 0.05f);
+
+		rightUpperArm.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		rightArm.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		rightHand.transform.localScale = new Vector3(0.05f, 0.1f, 0.05f);
+
+		leftHip.transform.localScale = new Vector3(0.05f, 0.1f, 0.05f);
+
+		rightHip.transform.localScale = new Vector3(0.05f, 0.1f, 0.05f);
+
+		leftUpperLeg.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		leftLeg.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		leftFoot.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		rightUpperLeg.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		rightLeg.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+		rightFoot.transform.localScale = new Vector3(0.05f, 0.25f, 0.05f);
+
+	}
+
+	    void updateBones()
+
+	{
+
+		updateOneBone(hip2spine, Hip_Center, Spine);
+
+		updateOneBone(spine2shoulder, Spine, Shoulder_Center);
+
+		updateOneBone(shoulder2head, Shoulder_Center, Head);
+
+		updateOneBone(leftShoulder, Shoulder_Center, Shoulder_Left);
+
+		updateOneBone(rightShoulder, Shoulder_Center, Shoulder_Right);
+
+		updateOneBone(leftUpperArm, Shoulder_Left, Elbow_Left);
+
+		updateOneBone(leftArm, Elbow_Left, Wrist_Left);
+
+		updateOneBone(leftHand, Wrist_Left, Hand_Left);
+
+		updateOneBone(rightUpperArm, Shoulder_Right, Elbow_Right);
+
+		updateOneBone(rightArm, Elbow_Right, Wrist_Right);
+
+		updateOneBone(rightHand, Wrist_Right, Hand_Right);
+
+		updateOneBone(leftHip, Hip_Center, Hip_Left);
+
+		updateOneBone(rightHip, Hip_Center, Hip_Right);
+
+		updateOneBone(leftUpperLeg, Hip_Left, Knee_Left);
+
+		updateOneBone(leftLeg, Knee_Left, Ankle_Left);
+
+		updateOneBone(leftFoot, Ankle_Left, Foot_Left);
+
+		updateOneBone(rightUpperLeg, Hip_Right, Knee_Right);
+
+		updateOneBone(rightLeg, Knee_Right, Ankle_Right);
+
+		updateOneBone(rightFoot, Ankle_Right, Foot_Right);
+
+    }
+   
+	    void updateOneBone(GameObject bone, GameObject start, GameObject end)
+
+	    {
+
+		Vector3 v3End = end.transform.position;
+
+		Vector3 v3Start = start.transform.position;
+
+		bone.transform.position = (v3End-v3Start)/2.0f + v3Start;
+
+        bone.transform.rotation = Quaternion.FromToRotation(Vector3.up, v3End-v3Start);
+
+	}
+   
+	void assessToetouch()
+
+	{
+ 
+     	Vector3 seg1 = new Vector3();
+
+	Vector3 seg2 = new Vector3();
+
+	seg1.x = Hand_Left.transform.localPosition.x - Hip_Left.transform.localPosition.x;
+
+	seg1.y = Hand_Left.transform.localPosition.y - Hip_Left.transform.localPosition.y;
+
+	seg1.z = Hand_Left.transform.localPosition.z - Hip_Left.transform.localPosition.z;
+
+	seg2.x = (Hand_Left.transform.localPosition.x - Ankle_Left.transform.localPosition.x);
+
+	seg2.y = (Hand_Left.transform.localPosition.y - Ankle_Left.transform.localPosition.y);
+
+	seg2.z = (Hand_Left.transform.localPosition.z - Ankle_Left.transform.localPosition.z);
+
+	float hand2hip = seg1.magnitude;
+
+	float hand2ankle = seg2.magnitude;
+ 
+switch(state)
+
+{
+
+case -1:
+
+	if(hand2hip < MIN_2_HIP && hand2ankle > MAX_THD)
+
+	{
+
+		this.state = 0;
+
+		min2ankle = hand2ankle;
+
+	}
+
+	break;
+case 0:
+
+	// hand2ankle should become smaller
+
+	if(hand2ankle < min2ankle)
+
+		min2ankle = hand2ankle;
+
+       if(hand2ankle > min2ankle && hand2ankle-min2ankle > 0.2)
+
+	{
+
+		if(min2ankle < MIN_2_ANKLE)
+	
+	{
+
+			// since we reached a min2ANKLE, we have to advanced our state anyway
+
+			// one bad iteration should not make it impossible to continue with a correct iteration later
+
+			this.state = 1;
+
+			max2ankle = hand2ankle;
+
+			min2hip = hand2hip;
+
+		}
+
+		else
+
+		{
+
+			Debug.Log ("rule0 violated: min2ankle wrong: "+min2ankle);
+
+			//rule0violated = true;
+
+			this.state = -1;
+
+		}
+
+	}
+
+	break;
+ 
+	case 1:
+
+	if(hand2ankle > max2ankle)
+
+		max2ankle = hand2ankle;
+
+	if(hand2hip < min2hip)
+
+		min2hip = hand2hip;
+
+	if(hand2ankle < max2ankle && max2ankle-hand2ankle > 0.2)
+ 
+			{
+
+		if(max2ankle > MAX_THD && min2hip < MIN_2_HIP)
+ 
+				{
+ 
+                    this.state = 0;
+
+			min2ankle = hand2ankle;
+
+			this.correctCount++;
+	
+		//counterDisplay.text = "Correct Iteration Count: "+this.correctCount;
+
+			Debug.Log ("Good iteration to: "+this.correctCount);
+
+		}
+
+		else
+
+		{
+
+			Debug.Log ("rule1 violated: min2ankle wrong: "+min2ankle);
+
+			//rule0violated = true;
+
+	this.state = -1;
+
+	}
+
+	}
+
+	break;
+
+}
+
+}
+
+}

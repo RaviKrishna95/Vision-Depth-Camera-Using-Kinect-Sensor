@@ -1,0 +1,27 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CSharpVariablesAndParameters
+{
+    class Test
+    {
+        int v;
+        // Constructors that initalize an instance of a Test
+        public Test() { } // v will be automatically assigned to 0
+        public Test(int a)
+        { // explicitly assign v a value
+            v = a;
+        }
+        static void Main(string[] args)
+        {
+            Test[] tests = new Test[2]; // declare array
+            Console.WriteLine(tests[1]); // ok, elements assigned to null
+            Test t=null;
+            Console.WriteLine(t); // error, t not assigned before use
+            Console.ReadLine();
+        }
+    }
+}

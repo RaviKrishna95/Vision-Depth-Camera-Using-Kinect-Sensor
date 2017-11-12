@@ -1,0 +1,19 @@
+<Window x:Class="ChallengeTaskShapeGame.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ChallengeTaskShapeGame"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="350" Width="525" Loaded="WindowLoaded" Closing="WindowClosing">
+    <Grid>
+        <Image x:Name="image" HorizontalAlignment="Left" Height="233" Margin="10,38,0,0" VerticalAlignment="Top" Width="324"/>
+        <Canvas x:Name="canvas" HorizontalAlignment="Left" Height="233" Margin="10,38,0,0" VerticalAlignment="Top" Width="324">
+            <Canvas x:Name="canvas1" Height="121" Canvas.Left="188" Canvas.Top="10" Width="126"/>
+        </Canvas>
+        <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="217,57,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="42" Width="98" Foreground="#FF1EF508"/>
+        <TextBlock x:Name="textBlock2" HorizontalAlignment="Left" Margin="10,276,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="33" Width="153"/>
+        <TextBlock x:Name="textBlock1" HorizontalAlignment="Left" Margin="376,276,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="33" Width="131"/>
+
+    </Grid>
+</Window>

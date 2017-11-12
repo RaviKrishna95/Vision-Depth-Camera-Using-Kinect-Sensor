@@ -1,0 +1,60 @@
+using UnityEngine;
+
+using System.Collections;
+
+
+public class NewBehaviourScript : MonoBehaviour
+
+{
+
+
+    private bool correct = true;
+
+
+
+
+    void Update()
+    
+    {
+
+        
+        if (correct)
+
+        {
+
+            transform.Translate(0, Time.deltaTime, 0 );
+
+            transform.Rotate(0,0,0);
+
+        }
+
+            else
+
+        {
+            
+	transform.Translate(0, -Time.deltaTime, 0);
+
+                  transform.Rotate(0,0,0);
+
+        }
+
+        if (transform.position.y >= 3.0)
+
+        {
+
+            correct = false;
+
+        }
+
+
+        if (transform.position.y <= -3.0)
+
+        {
+ 
+            correct = true;
+
+        }
+
+    }
+
+}

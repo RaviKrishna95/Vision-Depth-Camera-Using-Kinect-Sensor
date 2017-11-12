@@ -1,0 +1,40 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ChallengeTaskArrays
+{
+    class DeclareArraysSample
+    {
+        static void Main(string[] args)
+        {            
+            Console.WriteLine("Enter Numbers :");
+            int[] array = new int[5];
+            string array1 = "";
+            for (int i = 0; i < 5; i++)
+            {
+                array1 = Console.ReadLine();
+                array[i] = Convert.ToInt32(array1);
+            }
+
+            int a, b, temp = 0;
+            Console.WriteLine("Sorted Numbers are");
+            for (a = 0; a < array.Length; a++)
+            {
+                for (b = a + 1; b < array.Length; b++)
+                {
+                    if (array[a] > array[b])
+                    {
+                        temp = array[a];
+                        array[a] = array[b];
+                        array[b] = temp;
+                    }
+                }
+                Console.WriteLine(array[a]);
+            }
+            Console.ReadLine();
+        }
+    }
+}

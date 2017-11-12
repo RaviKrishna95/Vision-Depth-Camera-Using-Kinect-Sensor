@@ -1,0 +1,268 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using Microsoft.Kinect;
+using System.IO;
+using System.Windows.Threading;
+
+
+namespace ChallengeTaskPaintApp
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+        KinectSensor sensor;
+        int ch = 0;
+        Skeleton[] totalSkeleton = new Skeleton[6];
+        private void WindowLoaded(object sender, RoutedEventArgs e)
+        {
+            this.sensor = KinectSensor.KinectSensors[0];
+            this.sensor.SkeletonStream.TrackingMode = SkeletonTrackingMode.Seated;
+            this.sensor.SkeletonStream.Enable();
+            this.sensor.SkeletonFrameReady += skeletonFrameReady;
+            // start the sensor.
+            this.sensor.Start();
+        }
+        void skeletonFrameReady(object sender, SkeletonFrameReadyEventArgs e)
+        {
+            using (SkeletonFrame skeletonFrame = e.OpenSkeletonFrame())
+            {
+                if (skeletonFrame == null)
+                {
+                    return;
+                }
+                skeletonFrame.CopySkeletonDataTo(totalSkeleton);
+                Skeleton firstSkeleton = (from trackskeleton in totalSkeleton
+                                          where trackskeleton.TrackingState == SkeletonTrackingState.Tracked
+                                          select trackskeleton).FirstOrDefault();
+                if (firstSkeleton == null)
+                {
+                    return;
+                }
+                if (firstSkeleton.Joints[JointType.HandRight].TrackingState ==
+                   JointTrackingState.Tracked)
+                {
+                    this.MapJointsWithUIElement(firstSkeleton);
+                }
+            }
+        }
+        private void MapJointsWithUIElement(Skeleton skeleton)
+        {
+            Color objectColor;
+            Shape drawObject;
+            Shape drawObjectE1;
+            Shape drawObjectE2;
+            Shape drawObjectE3;
+            Shape drawObjectE4;
+            Shape drawObjectLeft;
+            Label drawErase;
+
+            //Point drawE1point = new Point(74, 105);
+            Point redpt = new Point(32, 46);
+            Point greenpt = new Point(106, 46);
+            Point yellowpt = new Point(106, 101);
+            Point bluept = new Point(32, 101);
+            Point erasept = new Point(32, 193);
+
+            //tracing
+            drawObject = new Ellipse();
+            drawObject.Width = 10; drawObject.Height = 10;
+            //leftposition
+            //string lefthandposition;
+            drawObjectLeft = new Ellipse();
+            drawObjectLeft.Width = 20;
+            drawObjectLeft.Height = 20;
+            drawObjectLeft.Fill = new SolidColorBrush(Colors.Black);
+            drawObjectLeft.Stroke = new SolidColorBrush(Colors.Black);
+            //drawObjectLeft.Name.Equals(lefthandposition) ;
+
+            //RED PALLET
+            drawObjectE1 = new Ellipse();
+            drawObjectE1.Width = 50; drawObjectE1.Height = 50;
+            drawObjectE1.Fill = new SolidColorBrush(Colors.Red);
+            drawObjectE1.Stroke = new SolidColorBrush(Colors.Black);
+            drawObjectE1.SetValue(Canvas.LeftProperty, redpt.X); drawObjectE1.SetValue(Canvas.TopProperty, redpt.Y);
+
+            //GREEN PALLET
+            drawObjectE2 = new Ellipse();
+            drawObjectE2.Width = 50; drawObjectE2.Height = 50;
+            drawObjectE2.Fill = new SolidColorBrush(Colors.Green);
+            drawObjectE2.Stroke = new SolidColorBrush(Colors.Black);
+            drawObjectE2.SetValue(Canvas.LeftProperty, greenpt.X); drawObjectE2.SetValue(Canvas.TopProperty, greenpt.Y);
+
+            //YELLOW PALLET
+            drawObjectE3 = new Ellipse();
+            drawObjectE3.Width = 50; drawObjectE3.Height = 50;
+            drawObjectE3.Fill = new SolidColorBrush(Colors.Yellow);
+            drawObjectE3.Stroke = new SolidColorBrush(Colors.Black);
+            drawObjectE3.SetValue(Canvas.LeftProperty, yellowpt.X); drawObjectE3.SetValue(Canvas.TopProperty, yellowpt.Y);
+
+            // BLUE PALLET
+            drawObjectE4 = new Ellipse();
+            drawObjectE4.Width = 50; drawObjectE4.Height = 50;
+            drawObjectE4.Fill = new SolidColorBrush(Colors.Blue);
+            drawObjectE4.Stroke = new SolidColorBrush(Colors.Black);
+            drawObjectE4.SetValue(Canvas.LeftProperty, bluept.X); drawObjectE4.SetValue(Canvas.TopProperty, bluept.Y);
+
+            // ERASE PALLET
+            drawErase = new Label();
+            drawErase.Width = 75; drawErase.Height = 25;
+            drawErase.Content = "Erase";
+            drawErase.Background = new SolidColorBrush(Colors.DarkGray);
+            drawErase.Foreground = new SolidColorBrush(Colors.DarkBlue);
+            drawErase.SetValue(Canvas.LeftProperty, erasept.X); drawErase.SetValue(Canvas.TopProperty, erasept.Y);
+
+            //drawObjectE1.Stroke = new SolidColorBrush(Colors.Black);
+            //drawObjectE1.SetValue(Canvas.LeftProperty, drawE1point.X); drawObjectE1.SetValue(Canvas.TopProperty, drawE1point.Y);
+
+
+            // Initial color of the trace
+            objectColor = Colors.Gray;
+
+            //For right hand
+            Point mappedPoint = ScalePosition(skeleton.Joints[JointType.HandRight].Position);
+            //For Left hand
+            Point mappedPointL = ScalePosition(skeleton.Joints[JointType.HandLeft].Position);
+
+            //ch = but(mappedPoint);
+            //Redcol.AreAnyTouchesCaptured
+
+            //Redcol.PointToScreen (redpt);
+            //Greencol.PointToScreen (greenpt);
+            //Yellowcol.PointToScreen (yellowpt);
+            //Bluecol.PointToScreen (bluept);
+            //&& mappedPoint >= redpt - 50
+            Vector vector1 = new Vector(30, 30);
+            //Vector vector2 = new Vector(10, 10);
+            //Point leftadd = Point.Add(mappedPointL, vector2);
+            Point redresult = Point.Add(redpt, vector1);
+            Point greenresult = Point.Add(greenpt, vector1);
+            Point yellowresult = Point.Add(yellowpt, vector1);
+            Point blueresult = Point.Add(bluept, vector1);
+            Point eraseresult = Point.Add(erasept, vector1);
+            //Point leftsuub = Point.Subtract(mappedPointL, vector2);
+            Point redresultsub = Point.Subtract(redpt, vector1);
+            Point greenresultsub = Point.Subtract(greenpt, vector1);
+            Point yellowresultsub = Point.Subtract(yellowpt, vector1);
+            Point blueresultsub = Point.Subtract(bluept, vector1);
+            Point eraseresultsub = Point.Subtract(erasept, vector1);
+
+            if (mappedPointL.X <= redresult.X && mappedPointL.X >= redresultsub.X)
+            {
+                if (mappedPointL.Y <= redresult.Y && mappedPointL.Y >= redresultsub.Y)
+                {
+                    ch = 1;
+
+                }
+            }
+            if (mappedPointL.X <= greenresult.X && mappedPointL.X >= greenresultsub.X)
+            {
+                if (mappedPointL.Y <= greenresult.Y && mappedPointL.Y >= greenresultsub.Y)
+                {
+                    ch = 2;
+                }
+            }
+            if (mappedPointL.X <= yellowresult.X && mappedPointL.X >= yellowresultsub.X)
+            {
+                if (mappedPointL.Y <= yellowresult.Y && mappedPointL.Y >= yellowresultsub.Y)
+                {
+                    ch = 3;
+                }
+            }
+            if (mappedPointL.X <= blueresult.X && mappedPointL.X >= blueresultsub.X)
+            {
+                if (mappedPointL.Y <= blueresult.Y && mappedPointL.Y >= blueresultsub.Y)
+                {
+                    ch = 4;
+                }
+
+            }
+            if (mappedPointL.X <= eraseresult.X && mappedPointL.X >= eraseresultsub.X)
+            {
+                if (mappedPointL.Y <= eraseresult.Y && mappedPointL.Y >= eraseresultsub.Y)
+                {
+                    paintapp.Children.Clear();
+                }
+
+            }
+
+
+            if (ch == 1)
+            {
+                objectColor = Colors.Red;
+            }
+            else if (ch == 2)
+            {
+                objectColor = Colors.Green;
+            }
+            else if (ch == 3)
+            {
+                objectColor = Colors.Yellow;
+            }
+            else if (ch == 4)
+            {
+                objectColor = Colors.Blue;
+
+            }
+
+            else
+            {
+                objectColor = Colors.Gray;
+            }
+
+
+            //Canvas.SetLeft(righthand, mappedPoint.X);
+            //Canvas.SetTop(righthand, mappedPoint.Y);
+            drawObject.SetValue(Canvas.LeftProperty, mappedPoint.X);
+            drawObject.SetValue(Canvas.TopProperty, mappedPoint.Y);
+            drawObject.Fill = new SolidColorBrush(objectColor);
+            //drawObjectLeft.SetValue(Canvas.LeftProperty, mappedPointL.X);
+            //drawObjectLeft.SetValue(Canvas.TopProperty, mappedPointL.Y);
+            Canvas.SetLeft(lefthandposition, mappedPointL.X);
+            Canvas.SetTop(lefthandposition, mappedPointL.Y);
+            paintapp.Children.Add(drawObject);
+            //paintapp.Children.Add(drawObjectLeft);
+            paintapp.Children.Add(drawObjectE1);
+            paintapp.Children.Add(drawObjectE2);
+            paintapp.Children.Add(drawObjectE3);
+            paintapp.Children.Add(drawObjectE4);
+            paintapp.Children.Add(drawErase);
+            paintapp.Children.Add(drawObjectLeft);
+            //this.textBox.Text = "x="+mappedPoint.X+", y="+mappedPoint.Y;
+
+            // Position of the lefthand
+
+
+        }
+
+        private Point ScalePosition(SkeletonPoint skeletonPoint)
+        {
+            DepthImagePoint depthPoint = this.sensor.CoordinateMapper.
+                      MapSkeletonPointToDepthPoint(skeletonPoint, DepthImageFormat.
+                                 Resolution640x480Fps30);
+            return new Point(depthPoint.X, depthPoint.Y);
+        }
+
+        private void WindowClosing(object sender, EventArgs e)
+        {
+
+        }
+    }
+}

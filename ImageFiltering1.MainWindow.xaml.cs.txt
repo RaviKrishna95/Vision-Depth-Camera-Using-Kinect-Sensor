@@ -1,0 +1,282 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Diagnostics;
+using System.Drawing;
+using Emgu.CV;
+using Emgu.CV.Features2D;
+using Emgu.CV.Structure;
+using Emgu.Util;
+using System.Runtime.InteropServices;
+using Microsoft.Kinect; 
+
+
+namespace ImageFiltering1
+{
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
+        Image<Bgr, Byte> img;
+
+        /*  private Image<Bgr, Byte> filterImage(Image<Bgr, Byte> image, double[,] filter, double factor, double bias, bool normalize = false)
+          {
+              Image<Bgr, Byte> filtered = new Image<Bgr, Byte>(image.Width, image.Height);
+
+              int w = image.Width; int h = image.Height;
+              int filterWidth = filter.GetLength(0); int filterHeight = filter.GetLength(1);
+
+              byte[,,] data = image.Data; byte[,,] filteredData = filtered.Data;
+
+
+              if (normalize)
+              {
+                  // calculate the sum of all elements in the kernel
+                  double sum = 0;
+                  for (int i = 0; i < filterWidth; i++)
+                  {
+                      for (int j = 0; j < filterHeight; j++)
+                      {
+                          sum += filter[i, j];
+                      }
+                  }
+                  // need to normalize the filter kernel
+                  for (int i = 0; i < filterWidth; i++)
+                  {
+                      for (int j = 0; j < filterHeight; j++)
+                      {
+                          filter[i, j] = filter[i, j] / sum;
+                      }
+                  }
+              }
+
+              for (int y = 0; y < w; ++y)
+              {
+                  for (int x = 0; x < h; ++x)
+                  {
+                      double red = 0.0, green = 0.0, blue = 0.0;
+                      for (int filterY = 0; filterY < filterWidth; filterY++)
+                      {
+                          for (int filterX = 0; filterX < filterHeight; filterX++)
+                          {
+                              {
+                                  int imageY = (y - filterWidth / 2 + filterX + w) % w;
+                                  int imageX = (x - filterHeight / 2 + filterY + h) % h;
+
+                                  red += data[imageX, imageY, 2] * filter[filterX, filterY];
+                                  green += data[imageX, imageY, 1] * filter[filterX, filterY];
+                                  blue += data[imageX, imageY, 0] * filter[filterX, filterY];
+                              }
+                              byte r = (byte)Math.Min(Math.Max((int)(factor * red + bias), 0), 255);
+                              byte g = (byte)Math.Min(Math.Max((int)(factor * green + bias), 0), 255);
+                              byte b = (byte)Math.Min(Math.Max((int)(factor * blue + bias), 0), 255);
+                              filteredData[x, y, 0] = b;
+                              filteredData[x, y, 1] = g;
+                              filteredData[x, y, 2] = r;
+                          }
+                      }
+                  }
+              }
+
+
+              return filtered;
+          }
+
+          private void Vertical_Click(object sender, RoutedEventArgs e)
+          {
+              // Filter kernel for detecting vertical edges
+              double[,] verticalFilter = new double[,] { { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { -1, -2, 6, -2, -1 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 } };
+
+
+              Image<Bgr, byte> niraj = filterImage(img, verticalFilter, 1.0, 0, false);
+              image2.Source = ToBitmapSource(niraj);
+
+          }
+
+          private void Horizontal_Click(object sender, RoutedEventArgs e)
+          {
+              // Filter kernel for detecting horizontal edges
+              double[,] filter = new double[,] { { 0, 0, -1, 0, 0 }, { 0, 0, -2, 0, 0 }, { 0, 0, 6, 0, 0 }, { 0, 0, -2, 0, 0 }, { 0, 0, -1, 0, 0 } };
+
+              Image<Bgr, byte> filteredimg = filterImage(img, filter, 1.0, 0, false);
+              image2.Source = ToBitmapSource(filteredimg);
+
+          }
+
+          private void Blur_Click(object sender, RoutedEventArgs e)
+          {
+              // Filter kernel for blurring (Gaussian kernel)
+              double[,] filter = new double[,] { { 1, 4, 6, 4, 1 }, { 4, 16, 24, 16, 4 }, { 6, 24, 36, 24, 6 }, { 4, 16, 24, 16, 4 }, { 1, 4, 6, 4, 1 } };
+
+              Image<Bgr, byte> filteredimg = filterImage(img, filter, 1.0, 0, true);
+              image2.Source = ToBitmapSource(filteredimg);
+
+          }
+
+          private void Sharper_Click(object sender, RoutedEventArgs e)
+          {
+              // sharper filter
+              double[,] filter = new double[,] { { -1, -1, -1 }, { -1, 9, -1 }, { -1, -1, -1 } };
+
+
+              Image<Bgr, byte> filteredimg = filterImage(img, filter, 1.0, 0, false);
+              image2.Source = ToBitmapSource(filteredimg);
+
+
+          }
+
+          private void Edge_Click(object sender, RoutedEventArgs e)
+          {
+              //Convert the image to grayscale and filter out the noise
+              Image<Gray, Byte> gray = img.Convert<Gray, Byte>().PyrDown().PyrUp(); // to remove noise
+
+              Gray cannyThreshold = new Gray(180);
+              Gray cannyThresholdLinking = new Gray(120);
+              Image<Gray, Byte> cannyEdges = gray.Canny(cannyThreshold, cannyThresholdLinking);
+              image2.Source = ToBitmapSource(cannyEdges);
+
+          } */
+
+        private void Browse_Click(object sender, RoutedEventArgs e)
+        {
+            // Create OpenFileDialog
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+            // Display OpenFileDialog by calling ShowDialog method
+            Nullable<bool> result = dlg.ShowDialog();
+
+            // Get the selected file name and display in a TextBox
+            if (result == true)
+            {
+                //TextBox path = (TextBox)(((FrameworkElement)sender).Parent as FrameworkElement).FindName("textBox");
+                textBox.Text = dlg.FileName;
+                //textBox.Focus(); //these 2 lines force the binding to trigger
+                //((Button)sender).Focus();
+
+
+                Image<Bgr, Byte> newimg;
+                try
+                {
+                    newimg = new Image<Bgr, byte>(dlg.FileName);
+                    this.img = newimg;
+                    image1.Source = ToBitmapSource(this.img);
+
+                }
+                catch
+                {
+                    MessageBox.Show("Invalid file format");
+                    return;
+                }
+            }
+        }
+
+        [DllImport("gdi32")]
+
+        private static extern int DeleteObject(IntPtr o);
+
+        public BitmapSource ToBitmapSource(IImage image)
+        {
+            using (System.Drawing.Bitmap source = image.Bitmap)
+            {
+                IntPtr ptr = source.GetHbitmap(); //obtain the Hbitmap
+
+                BitmapSource bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                            ptr, IntPtr.Zero, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+
+                DeleteObject(ptr); //release the HBitmap
+                return bs;
+            }
+        }
+
+        private void button_Click(object sender, RoutedEventArgs e)
+        {
+            //Convert the image to grayscale and filter out the noise
+            Image<Gray, Byte> gray = img.Convert<Gray, Byte>().PyrDown().PyrUp();
+            // Detecting circles
+            Gray cannyThreshold = new Gray(180);
+            Gray cannyThresholdLinking = new Gray(120);
+            Gray circleAccumulatorThreshold = new Gray(500);
+            CircleF[] circles = gray.HoughCircles(
+                 cannyThreshold,
+                 circleAccumulatorThreshold,
+                 4.0, //Resolution of the accumulator used to detect centers of the circles
+                15.0, //min distance 
+                 5, //min radius
+                 0 //max radius
+            )[0]; //Get the circles from the first channel
+                  // detecting lines
+            Image<Gray, Byte> cannyEdges = gray.Canny(cannyThreshold, cannyThresholdLinking);
+            LineSegment2D[] lines = cannyEdges.HoughLinesBinary(
+                1, //Distance resolution in pixel-related units
+                Math.PI / 45.0, //Angle resolution measured in radians.
+                20, //threshold
+                30, //min Line width
+                10 //gap between lines
+            )[0]; //Get the lines from the first channel
+
+            // find triangles and rectangles
+            List<Triangle2DF> triangleList = new List<Triangle2DF>();
+            List<MCvBox2D> boxList = new List<MCvBox2D>(); //a box is a rotated rectangle
+                                                           //allocate storage for contour approximation
+            using (MemStorage storage = new MemStorage())
+                for (Contour<System.Drawing.Point> contours = cannyEdges.FindContours(Emgu.CV.CvEnum.CHAIN_APPROX_METHOD.CV_CHAIN_APPROX_SIMPLE,Emgu.CV.CvEnum.RETR_TYPE.CV_RETR_LIST,storage);
+                           contours != null;
+                           contours = contours.HNext)
+                {
+                    Contour<System.Drawing.Point> currentContour = contours.ApproxPoly(contours.Perimeter * 0.05, storage);
+                    //only consider contours with area greater than 250
+                    if (currentContour.Area > 250)
+                    {
+                        if (currentContour.Total == 3) //The contour has 3 vertices, it is a triangle
+                        {
+                            System.Drawing.Point[] pts = currentContour.ToArray();
+                            triangleList.Add(new Triangle2DF(pts[0], pts[1], pts[2]));
+                        }
+                        else if (currentContour.Total == 4) //The contour has 4 vertices.
+                        {
+                            // determine if all the angles in the contour are within [80, 100] degree
+                            bool isRectangle = true;
+                            System.Drawing.Point[] pts = currentContour.ToArray();
+                            LineSegment2D[] edges = Emgu.CV.PointCollection.PolyLine(pts, true);
+
+                            for (int i = 0; i < edges.Length; i++)
+                            {
+                                double angle = Math.Abs(edges[(i + 1) %
+                    edges.Length].GetExteriorAngleDegree(edges[i]));
+                                if (angle < 80 || angle > 100)
+                                {
+                                    isRectangle = false; break;
+                                }
+                            }
+                            if (isRectangle) boxList.Add(currentContour.GetMinAreaRect());
+                        }
+                    }
+                }
+            Image<Bgr, Byte> shapesImg = img.CopyBlank();
+            // draw triangles and rectangles         
+            foreach (Triangle2DF triangle in triangleList)
+                shapesImg.Draw(triangle, new Bgr(System.Drawing.Color.DarkBlue), 2);
+            foreach (MCvBox2D box in boxList)
+                shapesImg.Draw(box, new Bgr(System.Drawing.Color.DarkOrange), 2);
+
+            // draw circles
+            foreach (CircleF circle in circles)
+                shapesImg.Draw(circle, new Bgr(System.Drawing.Color.Brown), 2);
+            image2.Source = ToBitmapSource(shapesImg);
+
+        }
+    }
+}

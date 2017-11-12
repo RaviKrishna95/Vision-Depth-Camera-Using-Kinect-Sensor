@@ -1,0 +1,149 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using Microsoft.Kinect;
+using System.Drawing;
+
+namespace ChallengeTaskDepthCam
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        KinectSensor sensor;
+       // private WriteableBitmap depthBitmap;
+        private short[] depthPixels;
+        private int frameWidth; // to calculate depthIndex
+        const float MaxDepthDistance = 4000;
+        const float MinDepthDistance = 800;
+        const float MaxDepthDistanceOffset = MaxDepthDistance - MinDepthDistance;
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+        private void WindowLoaded(object sender, RoutedEventArgs e)
+        {
+            if (KinectSensor.KinectSensors.Count > 0)
+            {
+                this.sensor = KinectSensor.KinectSensors[0];
+                if (this.sensor != null && !this.sensor.IsRunning)
+                {
+                    this.sensor.DepthStream.Enable(DepthImageFormat.Resolution320x240Fps30);
+                    this.depthPixels = new short[this.sensor.DepthStream.FramePixelDataLength];
+                  //  this.depthBitmap = new WriteableBitmap(this.sensor.DepthStream.FrameWidth, this.sensor.DepthStream.FrameHeight, 96.0, 96.0, PixelFormats.Gray16, null);
+                  //  this.image.Source = this.depthBitmap;
+                    this.sensor.DepthFrameReady += this.depthFrameReady;
+                    this.sensor.Start();
+                }
+                else
+                {
+                    MessageBox.Show("No device is connected!"); this.Close();
+                }
+            }
+        }
+        void depthFrameReady(object sender, DepthImageFrameReadyEventArgs e)
+        {
+            using (DepthImageFrame depthFrame = e.OpenDepthImageFrame())
+            {
+                if (null == depthFrame)
+                {
+                    return;
+                }
+                this.frameWidth = depthFrame.Width;
+                this.maxDepthField.Text = "" + depthFrame.MaxDepth;
+                this.minDepthField.Text = "" + depthFrame.MinDepth;
+                byte[] pixels = GenerateColoredBytes(depthFrame);
+                depthFrame.CopyPixelDataTo(depthPixels);
+                int stride = depthFrame.Width * 4;
+                image.Source = BitmapSource.Create(depthFrame.Width, depthFrame.Height, 96, 96, PixelFormats.Bgr32, null, pixels, stride);
+            }
+        }
+        private byte[] GenerateColoredBytes(DepthImageFrame depthFrame)
+        {
+            short[] rawDepthData = new short[depthFrame.PixelDataLength];
+            depthFrame.CopyPixelDataTo(rawDepthData);
+            Byte[] pixels = new byte[depthFrame.Height * depthFrame.Width * 4];
+            const int BlueIndex = 0;
+            const int GreenIndex = 1;
+            const int RedIndex = 2;
+            int depthIndex = 0;
+            int colorIndex = 0;
+
+            while (depthIndex < rawDepthData.Length && colorIndex < pixels.Length)
+            {
+                int player = rawDepthData[depthIndex] & DepthImageFrame.PlayerIndexBitmask;
+                int depth = rawDepthData[depthIndex] >> DepthImageFrame.PlayerIndexBitmaskWidth;
+                if (depth <= 1000)
+                {
+                    pixels[colorIndex + BlueIndex] = 0;
+                    pixels[colorIndex + GreenIndex] = 0;
+                    pixels[colorIndex + RedIndex] = 255;
+                }
+                else if (depth > 1000 && depth < 1500)
+                {
+                    pixels[colorIndex + BlueIndex] = 0;
+                    pixels[colorIndex + GreenIndex] = 255;
+                    pixels[colorIndex + RedIndex] = 0;
+                }
+                else if (depth > 1500 && depth < 2000)
+                {
+                    pixels[colorIndex + BlueIndex] = 97;
+                    pixels[colorIndex + GreenIndex] = 13;
+                    pixels[colorIndex + RedIndex] = 232;
+                }
+                else if (depth > 2000 && depth < 2500)
+                {
+                    pixels[colorIndex + BlueIndex] = 13;
+                    pixels[colorIndex + GreenIndex] = 232;
+                    pixels[colorIndex + RedIndex] = 79;
+                }
+                else if (depth > 2500 && depth < 3000)
+                {
+                    pixels[colorIndex + BlueIndex] = 13;
+                    pixels[colorIndex + GreenIndex] = 173;
+                    pixels[colorIndex + RedIndex] = 232;
+                }
+                else if (depth > 3000)
+                {
+                    pixels[colorIndex + BlueIndex] = 255;
+                    pixels[colorIndex + GreenIndex] = 0;
+                    pixels[colorIndex + RedIndex] = 0;
+                }
+                depthIndex++;
+                colorIndex += 4;
+            }
+            return pixels;
+        }
+        private void image1_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            System.Windows.Point currentPoint = e.GetPosition(image);
+            this.pixelXField.Text = currentPoint.X.ToString();
+            this.pixelYField.Text = currentPoint.Y.ToString();
+            int pixelIndex = (int)(currentPoint.X + ((int)currentPoint.Y * this.frameWidth));
+            this.depthIndexField.Text = "" + pixelIndex;
+            int distancemm = this.depthPixels[pixelIndex] >> DepthImageFrame.PlayerIndexBitmaskWidth;
+            this.depthField.Text = "" + distancemm;
+        }
+
+        private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+
+        }
+        private void textBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
+    }
+}
